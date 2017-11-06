@@ -8,7 +8,7 @@ import {
     ScrollView
 } from 'react-native';
 
-import React, { Component } from 'react';
+import React, {Component} from 'react';
 
 var ImagePicker = require('react-native-image-picker');
 
@@ -16,15 +16,13 @@ import Button from 'react-native-button';
 
 import Requestor from '../lib/Requestor';
 
-let facelist_id = 'facelist_005';
-let facelist_data = {
-    name: 'My 5th facelist'
-};
-
-
-// let persongroup_id = 'persongroup_id';
-// let persongroup_name = 'persongroup_name'
-// let peroson
+let persongroup_id = 'persongroup_id';
+let persongroup_data = {
+    name: 'persongroup_name'
+}
+let person_data = {
+    name: 'alex'
+}
 
 let face_api_base_url = 'https://westcentralus.api.cognitive.microsoft.com';
 
@@ -39,7 +37,9 @@ export default class SimilarFaces extends Component {
             },
             photo: null,
             similar_photo: null,
-            message: ''
+            message: '',
+            person_id: '',
+            persistedFaceId: ''
         };
     }
 
@@ -49,15 +49,9 @@ export default class SimilarFaces extends Component {
                 <View style={styles.container}>
                     <Button
                         containerStyle={styles.button}
-                        onPress={this._createFaceList.bind(this)}>
-                        Create Face List
+                        onPress={this._createPersonGroup.bind(this)}>
+                        Create Person Group
                     </Button>
-
-                    {/*<Button*/}
-                    {/*containerStyle={styles.button}*/}
-                    {/*onPress={this._createPersonGroup.bind(this)}>*/}
-                    {/*Create Person Group*/}
-                    {/*</Button>*/}
 
                     <Image
                         style={this.state.photo_style}
@@ -80,14 +74,14 @@ export default class SimilarFaces extends Component {
 
                     <Button
                         containerStyle={styles.button}
-                        onPress={this._addFaceToFaceList.bind(this)}>
-                        Add Face to Face List
+                        onPress={this._addFaceToPersonGroup.bind(this)}>
+                        Add Face to PersonGroup
                     </Button>
 
                     <Button
                         containerStyle={styles.button}
-                        onPress={this._getSimilarFace.bind(this)}>
-                        Get Similar Face
+                        onPress={this._verifyFace.bind(this)}>
+                        Verify Face
                     </Button>
 
                     <Image
@@ -113,9 +107,9 @@ export default class SimilarFaces extends Component {
 
         ImagePicker.showImagePicker(this.props.imagePickerOptions, (response) => {
 
-            if(response.error){
+            if (response.error) {
                 alert('Error getting the image. Please try again.');
-            }else{
+            } else {
 
                 let source = {uri: response.uri};
 
@@ -127,50 +121,45 @@ export default class SimilarFaces extends Component {
                     photo: source,
                     photo_data: response.data
                 });
-
             }
         });
 
     }
 
-    _createFaceList() {
+    _createPersonGroup() {
 
         Requestor.request(
-            face_api_base_url + '/face/v1.0/facelists/' + facelist_id,
+            face_api_base_url + '/face/v1.0/persongroups/' + persongroup_id,
             'PUT',
             this.props.apiKey,
-            JSON.stringify(facelist_data)
+            JSON.stringify(persongroup_data)
         )
-            .then(function(res){
-                alert('Face List Created!');
+            .then(function (res) {
+                // console.log(res);
+                alert('Person Group Created!');
             });
 
+        Requestor.request(
+            face_api_base_url + '/face/v1.0/persongroups/' + persongroup_id + '/persons',
+            'POST',
+            this.props.apiKey,
+            JSON.stringify(person_data)
+        )
+            .then(
+                (res) => {
+                    console.log(res['personId']);
+
+                    this.setState({
+                        person_id: res['personId']
+                    });
+                }
+            )
+            .catch(function (error) {
+                console.log(error);
+            });
     }
 
-    // _createPersonGroup(){
-    //
-    //     Requestor.request(
-    //     face_api_base_url + '/face/v1.0/persongroups/' + persongroup_id,
-    //         'PUT',
-    //         this.props.apiKey,
-    //         JSON.stringify(persongroup_data)
-    //     )
-    //         .then(function(){
-    //             Requestor.request(
-    //                 face_api_base_url + '/face/v1.0/persongroups/' + persongroup_id + '/persons',
-    //                 'PUT',
-    //                 this.props.apiKey,
-    //                 JSON.stringify(persongroup_data)
-    //
-    //         }
-    //
-    //     )
-    //     .then(function(res){
-    //         alert('Person Group Created!');
-    //     });
-    // }
-
-    _addFaceToFaceList() {
+    _addFaceToPersonGroup() {
 
         var user_data = {
             name: this.state.name,
@@ -178,7 +167,7 @@ export default class SimilarFaces extends Component {
         };
 
         Requestor.upload(
-            face_api_base_url + '/face/v1.0/facelists/' + facelist_id + '/persistedFaces',
+            face_api_base_url + '/face/v1.0/persongroups/' + persongroup_id + '/persons/' + this.state.person_id + '/persistedFaces',
             this.props.apiKey,
             this.state.photo_data,
             {
@@ -186,96 +175,19 @@ export default class SimilarFaces extends Component {
             }
         )
             .then((res) => {
+                console.log(res);
 
-                alert('Face was added to face list!');
+                this.setState({
+                    persistedFaceId: res['persistedFaceId']
+                });
+
+                alert('Face was added to person group!');
 
             });
 
     }
-    //
-    // _addFaceToPersonGroup() {
-    //
-    //     var user_data = {
-    //         name: this.state.name,
-    //         filename: this.state.photo.uri
-    //     };
-    //
-    //     Requestor.upload(
-    //         face_api_base_url + '/face/v1.0/persongroups/' + persongroup_id + '/persons',
-    //         this.props.apiKey,
-    //         this.state.photo_data,
-    //         {
-    //             userData: JSON.stringify(user_data)
-    //         }
-    //     )
-    //         .then((res) => {
-    //
-    //             alert('Face was added to person group!');
-    //
-    //         });
-    //
-    // }
 
-    // _verifyFace(){
-    //     Requestor.upload(
-    //         face_api_base_url + '/face/v1.0/detect',
-    //         this.props.apiKey,
-    //         this.state.photo_data
-    //     )
-    //         .then((facedetect_res) => {
-    //
-    //             let face_id = facedetect_res[0].faceId;
-    //
-    //             let data = {
-    //                 faceId: face_id,
-    //                 personGroupId: persongroup_id,
-    //                 maxNumOfCandidatesReturned: 2
-    //             }
-    //
-    //             Requestor.request(
-    //                 face_api_base_url + '/face/v1.0/verify',
-    //                 'POST',
-    //                 this.props.apiKey,
-    //                 JSON.stringify(data)
-    //             )
-    //                 .then((verify_res) => {
-    //
-    //                     let result = verify_res.isIdentical;
-    //                     let confidece = verify_res.confidence;
-    //
-    //                     alert(result);
-    //
-    //                     // let similar_face = similarfaces_res[1];
-    //                     //
-    //                     // Requestor.request(
-    //                     //     face_api_base_url + '/face/v1.0/facelists/' + facelist_id,
-    //                     //     'GET',
-    //                     //     this.props.apiKey
-    //                     // )
-    //                     //     .then((facelist_res) => {
-    //                     //
-    //                     //         let user_data = {};
-    //                     //         facelist_res['persistedFaces'].forEach((face) => {
-    //                     //             if(face.persistedFaceId == similar_face.persistedFaceId){
-    //                     //                 user_data = JSON.parse(face.userData);
-    //                     //             }
-    //                     //         });
-    //                     //
-    //                     //         this.setState({
-    //                     //             similar_photo: {uri: user_data.filename},
-    //                     //             message: 'Similar to: ' + user_data.name + ' with confidence of ' + similar_face.confidence
-    //                     //         });
-    //                     //
-    //                     //     });
-    //
-    //                 });
-    //
-    //         });
-    //
-    // }
-
-    _getSimilarFace() {
-
+    _verifyFace() {
         Requestor.upload(
             face_api_base_url + '/face/v1.0/detect',
             this.props.apiKey,
@@ -287,40 +199,22 @@ export default class SimilarFaces extends Component {
 
                 let data = {
                     faceId: face_id,
-                    faceListId: facelist_id,
-                    maxNumOfCandidatesReturned: 2
+                    personId: this.state.person_id,
+                    personGroupId: persongroup_id
                 }
 
                 Requestor.request(
-                    face_api_base_url + '/face/v1.0/findsimilars',
+                    face_api_base_url + '/face/v1.0/verify',
                     'POST',
                     this.props.apiKey,
                     JSON.stringify(data)
                 )
-                    .then((similarfaces_res) => {
+                    .then((verify_res) => {
 
-                        let similar_face = similarfaces_res[1];
+                        let result = verify_res.isIdentical;
+                        let confidece = verify_res.confidence;
 
-                        Requestor.request(
-                            face_api_base_url + '/face/v1.0/facelists/' + facelist_id,
-                            'GET',
-                            this.props.apiKey
-                        )
-                            .then((facelist_res) => {
-
-                                let user_data = {};
-                                facelist_res['persistedFaces'].forEach((face) => {
-                                    if(face.persistedFaceId == similar_face.persistedFaceId){
-                                        user_data = JSON.parse(face.userData);
-                                    }
-                                });
-
-                                this.setState({
-                                    similar_photo: {uri: user_data.filename},
-                                    message: 'Similar to: ' + user_data.name + ' with confidence of ' + similar_face.confidence
-                                });
-
-                            });
+                        alert(result);
 
                     });
 
